@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup Viewer — Live Preview</title>
+
+  <!-- React -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <!-- Babel standalone for JSX transpilation in browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide icons (optional, for components that use it) -->
+  <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.js" crossorigin></script>
+
+  <!-- Recharts (optional) -->
+  <script src="https://unpkg.com/recharts@2.7.2/umd/Recharts.js" crossorigin></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* ---- Upload screen ---- */
+    #upload-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 2rem;
+    }
+
+    #upload-screen.hidden { display: none; }
+
+    .upload-logo {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 28px;
+      color: #0a0a0a;
+      margin-bottom: 1.5rem;
+    }
+
+    .upload-title {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+
+    .upload-subtitle {
+      color: #666;
+      margin-bottom: 2rem;
+      text-align: center;
+      line-height: 1.6;
+    }
+	
+	.upload-subtitle1 {
+      color: white;
+      margin-bottom: 2rem;
+      text-align: center;
+      line-height: 1.6;
+	  font-size: 1.2rem;
+    }
+
+    .drop-zone {
+      width: 100%;
+      max-width: 500px;
+      border: 2px dashed #333;
+      border-radius: 20px;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .drop-zone-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .drop-zone-text {
+      color: #888;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .drop-zone-hint {
+      color: #444;
+      font-size: 0.8rem;
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .recent-files {
+      margin-top: 2rem;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .recent-files-title {
+      color: #555;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .recent-file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .recent-file-item:hover {
+      border-color: #10b981;
+      background: #0a1a14;
+    }
+
+    .recent-file-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .recent-file-size {
+      color: #555;
+      font-size: 0.75rem;
+    }
+
+    /* ---- Preview screen ---- */
+    #preview-screen {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    #preview-screen.active { display: flex; }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: #111;
+      border-bottom: 1px solid #222;
+      flex-shrink: 0;
+      z-index: 9999;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .toolbar-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 14px;
+      color: #0a0a0a;
+    }
+
+    .toolbar-filename {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #ccc;
+    }
+
+    .toolbar-status {
+      font-size: 0.7rem;
+      color: #10b981;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .toolbar-status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: #10b981;
+      border-radius: 50%;
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .toolbar-btn {
+      padding: 0.4rem 0.75rem;
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #999;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .toolbar-btn:hover {
+      background: #333;
+      color: #fff;
+      border-color: #444;
+    }
+
+    .toolbar-btn.primary {
+      background: #10b981;
+      border-color: #10b981;
+      color: #0a0a0a;
+    }
+
+    .toolbar-btn.primary:hover {
+      background: #34d399;
+    }
+
+    /* Viewport controls */
+    .viewport-controls {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: #1a1a1a;
+      padding: 2px;
+      border-radius: 8px;
+    }
+
+    .viewport-btn {
+      padding: 0.35rem 0.6rem;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: #666;
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .viewport-btn.active {
+      background: #333;
+      color: #fff;
+    }
+
+    .viewport-btn:hover:not(.active) {
+      color: #aaa;
+    }
+
+    /* Preview iframe container */
+    .preview-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a0a;
+      overflow: hidden;
+      padding: 0;
+    }
+
+    .preview-container.desktop { }
+    .preview-container.tablet .preview-frame { max-width: 768px; }
+    .preview-container.mobile .preview-frame { max-width: 390px; }
+
+    .preview-container.tablet,
+    .preview-container.mobile {
+      padding: 1.5rem;
+    }
+
+    .preview-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #fff;
+      transition: max-width 0.3s ease;
+    }
+
+    .preview-container.tablet .preview-frame,
+    .preview-container.mobile .preview-frame {
+      border-radius: 16px;
+      box-shadow: 0 0 60px rgba(0,0,0,0.5);
+    }
+
+    /* Error overlay */
+    .error-overlay {
+      display: none;
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a0505;
+      border: 1px solid #5c1a1a;
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      max-width: 600px;
+      z-index: 10000;
+    }
+
+    .error-overlay.visible { display: block; }
+
+    .error-title {
+      color: #f87171;
+      font-weight: 700;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .error-message {
+      color: #fca5a5;
+      font-size: 0.75rem;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+
+    .error-close {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.75rem;
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- UPLOAD SCREEN -->
+  <div id="upload-screen">
+    <div class="upload-logo">M</div>
+    <h1 class="upload-title">Mockup Viewer</h1>
+	    <p class="upload-subtitle1">
+      by <strong>Janosik</strong> with ❤️<br/>
+    </p>
+    <p class="upload-subtitle">
+      Upload a <strong>.jsx</strong> file with a React mockup<br/>
+      and preview it live with full interaction
+    </p>
+
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept=".jsx,.tsx,.js" />
+      <div class="drop-zone-icon">📂</div>
+      <div class="drop-zone-text">Drag a JSX file here or click</div>
+      <div class="drop-zone-hint">Supports: .jsx .tsx .js — React + Tailwind</div>
+    </div>
+
+    <div class="recent-files" id="recent-files"></div>
+  </div>
+
+  <!-- PREVIEW SCREEN -->
+  <div id="preview-screen">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="toolbar-logo">M</div>
+        <div>
+          <div class="toolbar-filename" id="toolbar-filename">—</div>
+          <div class="toolbar-status" id="toolbar-status">Rendering...</div>
+        </div>
+      </div>
+
+      <div class="toolbar-right">
+        <div class="viewport-controls">
+          <button class="viewport-btn active" data-viewport="desktop">Desktop</button>
+          <button class="viewport-btn" data-viewport="tablet">Tablet</button>
+          <button class="viewport-btn" data-viewport="mobile">Mobile</button>
+        </div>
+
+        <button class="toolbar-btn" id="btn-reload" title="Reload">↻ Reload</button>
+        <button class="toolbar-btn" id="btn-new" title="New file">+ New</button>
+      </div>
+    </div>
+
+    <div class="preview-container desktop" id="preview-container">
+      <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+  </div>
+
+  <!-- ERROR OVERLAY -->
+  <div class="error-overlay" id="error-overlay">
+    <button class="error-close" id="error-close">×</button>
+    <div class="error-title">Render error</div>
+    <div class="error-message" id="error-message"></div>
+  </div>
+
+  <script>
+    // ==============================================
+    // Mockup Viewer — core logic
+    // ==============================================
+
+    const uploadScreen = document.getElementById('upload-screen');
+    const previewScreen = document.getElementById('preview-screen');
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const previewFrame = document.getElementById('preview-frame');
+    const previewContainer = document.getElementById('preview-container');
+    const toolbarFilename = document.getElementById('toolbar-filename');
+    const toolbarStatus = document.getElementById('toolbar-status');
+    const errorOverlay = document.getElementById('error-overlay');
+    const errorMessage = document.getElementById('error-message');
+    const recentFilesContainer = document.getElementById('recent-files');
+
+    let currentCode = '';
+    let currentFilename = '';
+
+    // ---- File handling ----
+
+    function handleFile(file) {
+      if (!file) return;
+      currentFilename = file.name;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        currentCode = e.target.result;
+        saveToRecent(file.name, currentCode);
+        renderMockup(currentCode, file.name);
+      };
+      reader.readAsText(file);
+    }
+
+    // ---- Storage for recent files ----
+
+    function saveToRecent(name, code) {
+      try {
+        let recent = JSON.parse(localStorage.getItem('mockup-recent') || '[]');
+        recent = recent.filter(r => r.name !== name);
+        recent.unshift({ name, code, size: code.length, time: Date.now() });
+        if (recent.length > 5) recent = recent.slice(0, 5);
+        localStorage.setItem('mockup-recent', JSON.stringify(recent));
+        renderRecentFiles();
+      } catch(e) {}
+    }
+
+    function renderRecentFiles() {
+      try {
+        const recent = JSON.parse(localStorage.getItem('mockup-recent') || '[]');
+        if (recent.length === 0) {
+          recentFilesContainer.innerHTML = '';
+          return;
+        }
+        recentFilesContainer.innerHTML = `
+          <div class="recent-files-title">Recent files</div>
+          ${recent.map((r, i) => `
+            <div class="recent-file-item" data-index="${i}">
+              <div>
+                <div class="recent-file-name">${r.name}</div>
+              </div>
+              <div class="recent-file-size">${(r.code.length / 1024).toFixed(1)} KB</div>
+            </div>
+          `).join('')}
+        `;
+        recentFilesContainer.querySelectorAll('.recent-file-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const idx = parseInt(item.dataset.index);
+            const r = recent[idx];
+            if (r) {
+              currentCode = r.code;
+              currentFilename = r.name;
+              renderMockup(r.code, r.name);
+            }
+          });
+        });
+      } catch(e) {}
+    }
+
+    // ---- Core: render mockup in iframe ----
+
+    function renderMockup(jsxCode, filename) {
+      // Switch screens
+      uploadScreen.classList.add('hidden');
+      previewScreen.classList.add('active');
+      toolbarFilename.textContent = filename;
+      toolbarStatus.textContent = 'Transpiling...';
+      hideError();
+
+      try {
+        // Clean up JSX for browser
+        let code = jsxCode;
+
+        // Remove import/export statements
+        code = code.replace(/^import\s+.*?['"]\s*;?\s*$/gm, '');
+        code = code.replace(/^export\s+default\s+/gm, 'const __DEFAULT_EXPORT__ = ');
+        code = code.replace(/^export\s+/gm, '');
+
+        // Find the component name (last const Something = or function Something)
+        const componentMatches = code.match(/(?:const|function)\s+([A-Z][A-Za-z0-9_]*)\s*=?\s*(?:\(|=>)/g);
+        let mainComponent = '__DEFAULT_EXPORT__';
+        if (code.includes('__DEFAULT_EXPORT__')) {
+          // Find what __DEFAULT_EXPORT__ points to
+          const m = code.match(/const __DEFAULT_EXPORT__\s*=\s*([A-Z][A-Za-z0-9_]*)/);
+          if (m) mainComponent = m[1];
+          // Remove the __DEFAULT_EXPORT__ assignment line if it just references another component
+          if (m) code = code.replace(/const __DEFAULT_EXPORT__\s*=\s*[A-Z][A-Za-z0-9_]*\s*;?/g, '');
+        } else if (componentMatches && componentMatches.length > 0) {
+          // Use the last top-level component defined
+          const last = componentMatches[componentMatches.length - 1];
+          const m = last.match(/(?:const|function)\s+([A-Z][A-Za-z0-9_]*)/);
+          if (m) mainComponent = m[1];
+        }
+
+        // Transpile JSX with Babel
+        const transpiled = Babel.transform(code, {
+          presets: ['react'],
+          filename: filename,
+        }).code;
+
+        // Build iframe HTML
+        const iframeHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { min-height: 100vh; }
+    @keyframes bounce-in {
+      0% { transform: scale(0.9); opacity: 0; }
+      50% { transform: scale(1.02); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-bounce-in { animation: bounce-in 0.4s ease-out; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const { useState, useEffect, useRef, useCallback, useMemo, useReducer, createContext, useContext, Fragment } = React;
+
+    try {
+      ${transpiled}
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(${mainComponent}));
+
+      // Signal parent that rendering succeeded
+      window.parent.postMessage({ type: 'render-success' }, '*');
+    } catch (err) {
+      document.getElementById('root').innerHTML = '<div style="padding:2rem;color:#f87171;font-family:monospace;"><h2>Render Error</h2><pre>' + err.message + '</pre></div>';
+      window.parent.postMessage({ type: 'render-error', message: err.message }, '*');
+    }
+  <\/script>
+</body>
+</html>`;
+
+        // Write to iframe
+        previewFrame.srcdoc = iframeHTML;
+        toolbarStatus.textContent = 'Live';
+
+      } catch (err) {
+        showError(err.message);
+        toolbarStatus.textContent = 'Error';
+        toolbarStatus.style.color = '#f87171';
+      }
+    }
+
+    // ---- Error handling ----
+
+    function showError(msg) {
+      errorMessage.textContent = msg;
+      errorOverlay.classList.add('visible');
+    }
+
+    function hideError() {
+      errorOverlay.classList.remove('visible');
+      toolbarStatus.style.color = '#10b981';
+    }
+
+    // ---- Listen for messages from iframe ----
+
+    window.addEventListener('message', (e) => {
+      if (e.data?.type === 'render-success') {
+        toolbarStatus.textContent = 'Live';
+        toolbarStatus.style.color = '#10b981';
+        hideError();
+      } else if (e.data?.type === 'render-error') {
+        showError(e.data.message);
+        toolbarStatus.textContent = 'Error';
+        toolbarStatus.style.color = '#f87171';
+      }
+    });
+
+    // ---- Events: Upload ----
+
+    fileInput.addEventListener('change', (e) => {
+      handleFile(e.target.files[0]);
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    // ---- Events: Toolbar ----
+
+    document.getElementById('btn-reload').addEventListener('click', () => {
+      if (currentCode) renderMockup(currentCode, currentFilename);
+    });
+
+    document.getElementById('btn-new').addEventListener('click', () => {
+      previewScreen.classList.remove('active');
+      uploadScreen.classList.remove('hidden');
+      previewFrame.srcdoc = '';
+    });
+
+    document.getElementById('error-close').addEventListener('click', hideError);
+
+    // ---- Viewport switching ----
+
+    document.querySelectorAll('.viewport-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.viewport-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        previewContainer.className = 'preview-container ' + btn.dataset.viewport;
+      });
+    });
+
+    // ---- Init ----
+    renderRecentFiles();
+  </script>
+</body>
+</html>
