@@ -1,9 +1,8 @@
 <p align="center">
-  <img src="banner.svg" alt="Mockup Viewer" width="100%"/>
-</p>
-
-<p align="center">
   <strong>Drop a JSX file. Get a live, interactive React preview. No server needed.</strong>
+</p>
+<p align="center">
+  <strong> </strong>
 </p>
 
 <p align="center">
